@@ -172,8 +172,6 @@ if 'test_df' not in st.session_state:
     st.session_state['test_df'] = None
 if 'edited_df' not in st.session_state:
     st.session_state['edited_df'] = None
-if 'corr_df' not in st.session_state:
-    st.session_state['corr_df'] = None
 if 'lab_df' not in st.session_state:
     st.session_state['lab_df'] = None
 if 'training_data' not in st.session_state:
@@ -187,8 +185,9 @@ if 'focused_classes_list' not in st.session_state:
     ]
 
 # サイドバーで機能を選択し、セッション状態に保存
-menu_option = st.sidebar.radio("メニュー", ["モデル学習", "色分類予測", "修正・モデル更新", "Lab色空間プロット"],
-                              index=["モデル学習", "色分類予測", "修正・モデル更新", "Lab色空間プロット"].index(st.session_state['current_menu']))
+menu_option = st.sidebar.radio("メニュー", ["モデル学習", "色分類予測", "Lab色空間プロット"],
+                              index=["モデル学習", "色分類予測", "Lab色空間プロット"].index(st.session_state['current_menu']) 
+                              if st.session_state['current_menu'] in ["モデル学習", "色分類予測", "Lab色空間プロット"] else 0)
 st.session_state['current_menu'] = menu_option
 
 # ----- 1. モデル学習 -----
@@ -472,74 +471,7 @@ elif menu_option == "色分類予測":
                 import traceback
                 st.error(traceback.format_exc())  # デバッグ用に詳細なエラー情報を表示
 
-# ----- 3. 修正・モデル更新 -----
-elif menu_option == "修正・モデル更新":
-    st.header("修正・モデル更新")
-    
-    st.markdown("### 予測結果の手動修正")
-    st.markdown("※アップロードされた予測結果CSVの「主観の色分類」欄のみ編集できます。")
-    correction_file = st.file_uploader("修正する予測結果CSVをアップロード", type=["csv"], key="correction_upload")
-    if correction_file is not None:
-        try:
-            df_corr = pd.read_csv(correction_file)
-        except Exception as e:
-            st.error("CSVの読み込みエラー: " + str(e))
-        else:
-            # 色の選択肢リスト
-            colors = [
-                '高白色', '白', 'ナチュラル', '黒', 'グレー', 
-                '赤', 'オレンジ', '茶', '黄色', '緑', 
-                '青', '紫', 'ピンク', '金', '銀'
-            ]
-            
-            st.subheader("予測結果（編集前）")
-            st.dataframe(df_corr)
-            
-            # 編集不可の列リストを作成（主観の色分類以外のすべての列）
-            disabled_columns = [col for col in df_corr.columns if col != "主観の色分類"]
-            
-            # カラム設定で主観の色分類をセレクトボックスにし、他の列は編集不可に
-            st.subheader("編集テーブル")
-            edited_df = st.data_editor(
-                data=df_corr,
-                column_config={
-                    "主観の色分類": st.column_config.SelectboxColumn(
-                        "主観の色分類",
-                        help="正しい色分類を選択してください",
-                        options=colors,
-                        default=None
-                    )
-                },
-                disabled=disabled_columns,
-                use_container_width=True,
-                key="prediction_editor"
-            )
-            
-            
-            st.markdown("### 修正を反映してモデルを更新")
-            if st.button("修正を反映してモデル更新"):
-                try:
-                    df_update = edited_df.copy()
-                    df_update = df_update.rename(columns={"予測色分類": "主観の色分類"})
-                    df_update = df_update[['L', 'a', 'b', '光沢感', '主観の色分類']]
-                    df_update['光沢感'] = df_update['光沢感'].fillna("None")
-                    X_new = df_update[['L', 'a', 'b', '光沢感']]
-                    X_new = pd.get_dummies(X_new, columns=['光沢感'])
-                    X_new = X_new.reindex(columns=st.session_state['feature_columns'], fill_value=0)
-                    y_new = df_update['主観の色分類']
-                    
-                    new_model = RandomForestClassifier(random_state=42)
-                    new_model.fit(X_new, y_new)
-                    
-                    st.success("モデルが更新されました。")
-                    st.session_state['model'] = new_model
-                    
-                    with open("model_updated.pkl", "wb") as f:
-                        pickle.dump((new_model, st.session_state['feature_columns']), f)
-                    st.info("更新されたモデルが model_updated.pkl として保存されました。")
-                except Exception as e:
-                    st.error("モデル更新中にエラーが発生しました: " + str(e))
-# ----- 4. Lab色空間プロット -----
+# ----- 3. Lab色空間プロット -----
 elif menu_option == "Lab色空間プロット":
     st.header("Lab色空間上に色分類をプロット")
     
