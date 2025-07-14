@@ -356,6 +356,10 @@ elif menu_option == "色分類予測":
             # 既にセッションにある場合はそれを利用
             df_test = st.session_state['predicted_test_df']
 
+        # 過去に編集した結果があればそれを反映
+        if st.session_state.get('edited_df') is not None:
+            df_test = st.session_state['edited_df']
+
         # 色の選択肢リスト
         colors = [
             '高白色', '白', 'ナチュラル', '黒', 'グレー', 
@@ -399,6 +403,7 @@ elif menu_option == "色分類予測":
             key="prediction_editor"
         )
         st.session_state['edited_df'] = edited_df  # 編集結果をセッションに保存
+        st.session_state['predicted_test_df'] = edited_df  # 編集内容も保持
 
         
         # 結果のダウンロードボタン
